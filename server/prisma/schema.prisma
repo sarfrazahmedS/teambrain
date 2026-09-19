@@ -1,0 +1,166 @@
+// TeamBrain — multi-tenant RAG knowledge base.
+// PostgreSQL + pgvector: chunk embeddings are stored in a `vector` column and
+// queried with cosine distance (<=>) via raw SQL (Prisma can't type `vector`).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships   Membership[]
+  refreshTokens RefreshToken[]
+  documents     Document[]
+  conversations Conversation[]
+  messages      Message[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships   Membership[]
+  documents     Document[]
+  chunks        Chunk[]
+  conversations Conversation[]
+
+  @@map("workspaces")
+}
+
+model Membership {
+  id          String        @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(MEMBER)
+  createdAt   DateTime      @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+model Document {
+  id          String         @id @default(cuid())
+  workspaceId String
+  uploaderId  String?
+  title       String
+  sourceType  String // "pdf" | "text" | "markdown"
+  status      DocumentStatus @default(PENDING)
+  error       String?
+  charCount   Int            @default(0)
+  chunkCount  Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  uploader  User?     @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+  chunks    Chunk[]
+
+  @@index([workspaceId])
+  @@map("documents")
+}
+
+model Chunk {
+  id          String                      @id @default(cuid())
+  documentId  String
+  workspaceId String
+  index       Int
+  content     String
+  embedding   Unsupported("vector(384)")?
+  createdAt   DateTime                    @default(now())
+
+  document  Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([workspaceId])
+  @@map("chunks")
+}
+
+model Conversation {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  title       String   @default("New chat")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@index([workspaceId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String
+  userId         String?
+  role           MessageRole
+  content        String
+  citations      Json?
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId])
+  @@map("messages")
+}

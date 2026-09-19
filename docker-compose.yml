@@ -1,0 +1,21 @@
+# PostgreSQL with the pgvector extension pre-installed, for local development.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: teambrain-db
+    environment:
+      POSTGRES_USER: teambrain
+      POSTGRES_PASSWORD: teambrain
+      POSTGRES_DB: teambrain
+    ports:
+      - "5432:5432"
+    volumes:
+      - teambrain_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U teambrain -d teambrain"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  teambrain_pgdata:
