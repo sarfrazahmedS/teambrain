@@ -1,5 +1,7 @@
 # TeamBrain
 
+![CI](https://github.com/sarfrazahmedS/teambrain/actions/workflows/ci.yml/badge.svg)
+
 A **multi-tenant RAG (retrieval-augmented generation) knowledge base API**. Teams upload
 their documents into isolated workspaces; TeamBrain chunks and embeds them into
 **PostgreSQL + pgvector**, then answers questions with **Claude** — grounded in each team's
