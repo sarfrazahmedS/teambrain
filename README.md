@@ -80,23 +80,39 @@ npm run dev
 
 ## API overview
 
-**Auth**
-| Method | Route        | Description |
-|--------|--------------|-------------|
-| POST   | `/register`  | Create an account |
-| POST   | `/login`     | Log in (rate-limited) → access + refresh tokens |
-| POST   | `/refresh`   | Rotate the refresh token → new access token |
-| POST   | `/logout`    | Revoke the refresh token |
+All routes are under `/api`; authenticated requests send `Authorization: Bearer <accessToken>`.
 
-**Documents** (workspace-scoped)
-| Method | Route            | Description |
-|--------|------------------|-------------|
-| GET    | `/`              | List documents in the workspace |
-| POST   | `/`              | Upload a file → ingest + embed |
-| GET    | `/:documentId`   | Get one document |
-| DELETE | `/:documentId`   | Delete (workspace `OWNER` / `ADMIN` only) |
+**Auth** — `/api/auth`
+| Method | Route | Description |
+|--------|-------|-------------|
+| POST | `/register` | Create an account → access + refresh tokens |
+| POST | `/login` | Log in (rate-limited) |
+| POST | `/refresh` | Rotate the refresh token |
+| POST | `/logout` | Revoke the refresh token |
 
-Plus workspace management and a grounded chat/ask endpoint over each workspace's documents.
+**Workspaces** — `/api/workspaces`
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/` | List the caller's workspaces |
+| POST | `/` | Create a workspace (caller becomes `OWNER`) |
+| GET | `/:workspaceId` | Workspace detail + members |
+
+**Documents** — `/api/workspaces/:workspaceId/documents`
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/` | List documents |
+| POST | `/` | Upload a file or text → chunk + embed |
+| GET | `/:documentId` | Get one document |
+| DELETE | `/:documentId` | Delete (`OWNER` / `ADMIN` only) |
+
+**Chat (RAG)** — `/api/workspaces/:workspaceId`
+| Method | Route | Description |
+|--------|-------|-------------|
+| POST | `/ask` | Ask a question → retrieves the top-K chunks, answers with Claude (or the offline mock), returns `{ answer, citations, conversationId }` |
+| GET | `/conversations` | List the caller's conversations |
+| GET | `/conversations/:conversationId` | A conversation with its messages |
+
+> Every workspace-scoped route is guarded by membership — one workspace can never read another's documents or chats.
 
 ## Configuration
 
