@@ -1,18 +1,33 @@
 # TeamBrain
 
+[![Live Demo](https://img.shields.io/badge/▶_Live_Demo-Try_it_now-3b82f6?style=for-the-badge)](https://sarfrazahmeds.github.io/teambrain/)
+
 ![CI](https://github.com/sarfrazahmedS/teambrain/actions/workflows/ci.yml/badge.svg)
+![License](https://img.shields.io/badge/License-MIT-3b82f6)
 
-A **multi-tenant RAG (retrieval-augmented generation) knowledge base API**. Teams upload
-their documents into isolated workspaces; TeamBrain chunks and embeds them into
-**PostgreSQL + pgvector**, then answers questions with **Claude** — grounded in each team's
-own documents, with citations back to the source chunks.
-
-Built as a clean, typed **Express + Prisma** REST API with proper multi-tenancy, JWT auth,
-role-based access control, request validation, rate-limiting and CI.
+A **multi-tenant RAG (retrieval-augmented generation) knowledge base** — a typed
+**Express + Prisma + pgvector** API **and a React chat client**. Teams upload their documents
+into isolated workspaces; TeamBrain chunks and embeds them into **PostgreSQL + pgvector**, then
+answers questions with **Claude** — grounded in each team's own documents, with citations back
+to the source chunks.
 
 > **Runs free out of the box.** Embeddings are generated locally (no key, no cost). Leave
 > `ANTHROPIC_API_KEY` empty to run in **demo mode** — retrieval and citations are fully real,
 > and answers come from a built-in mock generator. Add a key to get full Claude-written answers.
+
+## 🕹️ Live Demo
+
+**▶️ Try it live — [sarfrazahmeds.github.io/teambrain](https://sarfrazahmeds.github.io/teambrain/)**
+
+The demo runs the **real React client** against an **in-memory mock backend** — no server or
+database to set up. Retrieval and citations are real (scored over the seeded documents); the
+answer prose is templated (a real `ANTHROPIC_API_KEY` on the server gives full Claude-written
+answers). Sign in with `demo@teambrain.dev` / `Passw0rd!`, then ask about the seeded
+"Acme Inc." workspace — or add your own documents.
+
+| Workspace + documents | Ask — grounded in your docs, with citations |
+| :---: | :---: |
+| ![Workspace](screenshots/workspace.png) | ![RAG chat with citations](screenshots/chat.png) |
 
 ---
 
@@ -45,6 +60,7 @@ role-based access control, request validation, rate-limiting and CI.
 | LLM          | Anthropic **Claude** (optional — demo mode without a key) |
 | Auth         | JWT (access + rotating refresh), bcrypt |
 | Ingestion    | `pdf-parse`, custom chunker |
+| Client       | React 19, Vite, React Router, react-markdown |
 | Dev / CI     | Docker Compose (pgvector), GitHub Actions |
 
 ## Architecture
@@ -78,6 +94,11 @@ npm run db:seed
 
 # 4. Run the API (http://localhost:4000)
 npm run dev
+
+# 5. Run the client (http://localhost:5173) — in another terminal
+cd ../client
+npm install
+npm run dev        # Vite proxies /api → :4000
 ```
 
 ## API overview
@@ -134,11 +155,13 @@ Key `.env` settings (see [`server/.env.example`](server/.env.example)):
 ```
 server/
   src/
-    modules/        auth · documents · workspaces
-    lib/            embeddings · chunk · llm (Claude) · jwt · prisma
+    modules/        auth · workspaces · documents · chat (RAG)
+    lib/            embeddings · chunk · llm (Claude) · retrieve · jwt · prisma
     middleware/     authenticate · workspace · validate · rateLimit · errorHandler
   prisma/           schema + seed
-.github/workflows/  ci.yml
+client/             React + Vite chat UI (auth · workspace · documents · RAG chat)
+  src/api/demo.ts   in-memory mock backend for the static live demo
+.github/workflows/  ci.yml · deploy-demo.yml (GitHub Pages)
 docker-compose.yml  pgvector Postgres for local dev
 ```
 
